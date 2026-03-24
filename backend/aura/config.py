@@ -1,6 +1,7 @@
 import os
 from functools import lru_cache
-
+from dotenv import load_dotenv
+load_dotenv()
 
 class Settings:
     # ── AI Keys ──────────────────────────────────────────────
@@ -19,7 +20,7 @@ class Settings:
 
     # ── ECHO Risk Thresholds ──────────────────────────────────
     RISK_LOW: float = float(os.getenv("RISK_LOW", "0.25"))
-    RISK_MEDIUM: float = float(os.getenv("RISK_MEDIUM", "0.50"))
+    RISK_MEDIUM: float = float(os.getenv("RISK_MEDIUM", "0.40"))
     RISK_HIGH: float = float(os.getenv("RISK_HIGH", "0.75"))
 
     # ── Session ───────────────────────────────────────────────
