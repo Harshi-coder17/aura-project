@@ -44,7 +44,7 @@ app = FastAPI(
 )
 
 # ────────────────────────────────────────────────
-# ✅ CORS (safe default)
+# CORS (safe default)
 # ────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
@@ -56,7 +56,7 @@ app.add_middleware(
 
 
 # ════════════════════════════════════════════════
-# 🚀 MAIN ENDPOINT (FINAL FIXED)
+#  MAIN ENDPOINT (FINAL FIXED)
 # ════════════════════════════════════════════════
 @app.post("/api/v1/process")
 async def process(request: Request):
