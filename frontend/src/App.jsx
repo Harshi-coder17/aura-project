@@ -1,20 +1,3 @@
-<<<<<<< HEAD
-import { useState } from "react";
-import InputBox from "./components/InputBox";
-import ResponseBox from "./components/ResponseBox";
-import { sendMessage } from "./services/api";
-
-function App() {
-  const [response, setResponse] = useState(null);
-
-  const handleSubmit = async (text) => {
-    try {
-      const data = await sendMessage(text);
-      console.log("API Response:", data);
-      setResponse(data);
-    } catch (error) {
-      console.error("Error:", error);
-=======
 import { useState, useEffect } from "react";
 import ModeToggle   from "./components/ModeToggle";
 import HomeScreen   from "./components/HomeScreen";
@@ -56,21 +39,10 @@ export default function App() {
       setScreen("guidance");
     } catch (err) {
       showToast(`❌ ${err.message}. Check backend connection.`);
->>>>>>> 73ffa1e (frontend updated)
     }
   };
 
   return (
-<<<<<<< HEAD
-    <div>
-      <InputBox onSubmit={handleSubmit} />
-      <ResponseBox data={response} />
-    </div>
-  );
-}
-
-export default App;
-=======
     <div className="relative">
       <ModeToggle mode={mode} onToggle={handleModeToggle} />
 
@@ -94,4 +66,3 @@ export default App;
     </div>
   );
 }
->>>>>>> 73ffa1e (frontend updated)
