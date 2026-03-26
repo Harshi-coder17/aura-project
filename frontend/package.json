@@ -18,13 +18,19 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+<<<<<<< HEAD
+=======
     "autoprefixer": "^10.4.27",
+>>>>>>> 73ffa1e (frontend updated)
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+<<<<<<< HEAD
+=======
     "postcss": "^8.5.8",
     "tailwindcss": "^3.4.19",
+>>>>>>> 73ffa1e (frontend updated)
     "vite": "^8.0.1"
   }
 }
