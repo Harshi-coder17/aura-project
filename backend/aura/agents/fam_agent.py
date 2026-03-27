@@ -55,7 +55,9 @@ async def analyze(payload: dict, req: ProcessRequest) -> FAMResult:
  
    # Step 4: Personal profile injection
    personal_flags, contraindications = [], list(protocol.get("contraindications", []))
-   if req.mode.value == "personal" and req.user_id:
+   mode_val = req.mode.value if hasattr(req.mode, "value") else req.mode
+
+   if mode_val == "personal" and getattr(req, "user_id", None):
        personal_flags, contraindications = _apply_personal_profile(
            req.user_id, contraindications)
  
@@ -129,3 +131,32 @@ def _apply_personal_profile(user_id: str, base_ci: list) -> tuple[list, list]:
    flags = profile.get("conditions", []) + [f"allergic:{a}" for a in profile.get("allergies", [])]
    extra_ci = [f"avoid_{a}" for a in profile.get("allergies", [])]
    return flags, base_ci + extra_ci
+
+# ─────────────────────────────────────────────
+# PUBLIC COMPATIBILITY WRAPPER (DO NOT REMOVE)
+# ─────────────────────────────────────────────
+async def process(text: str, mode: str):
+    payload = {
+        "normalized_text": text,
+        "image_features": None
+    }
+
+    # Create mock request object
+    class DummyReq:
+        def __init__(self):
+            self.mode = type("obj", (), {"value": mode})
+            self.user_id = None
+
+    result = await analyze(payload, DummyReq())
+
+    #  NORMALIZE OUTPUT FOR BACKEND
+    return {
+        "injury": result.injury,
+        "severity": result.severity.value,
+        "body_part": result.body_part or "Unknown",
+        "first_aid": result.protocol_steps,   
+        "confidence": result.confidence,
+        "protocol_code": result.protocol_code,
+        "contraindications": result.contraindications,
+        "personal_flags": result.personal_flags
+    }

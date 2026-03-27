@@ -69,14 +69,6 @@ export default function MapScreen({ result, onBack }) {
           ))}
         </div>
       )}
-
-      <button
-        onClick={() => window.open("tel:108")}
-        className="w-full bg-danger text-white rounded-2xl py-5 font-bold text-lg
-                   shadow-lg active:scale-97 transition-transform mt-auto"
-      >
-        🚑 Call Ambulance (108)
-      </button>
     </div>
   );
 }

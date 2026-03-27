@@ -1,20 +1,3 @@
-<<<<<<< HEAD
-import { useState } from "react";
-import InputBox from "./components/InputBox";
-import ResponseBox from "./components/ResponseBox";
-import { sendMessage } from "./services/api";
-
-function App() {
-  const [response, setResponse] = useState(null);
-
-  const handleSubmit = async (text) => {
-    try {
-      const data = await sendMessage(text);
-      console.log("API Response:", data);
-      setResponse(data);
-    } catch (error) {
-      console.error("Error:", error);
-=======
 import { useState, useEffect } from "react";
 import ModeToggle   from "./components/ModeToggle";
 import HomeScreen   from "./components/HomeScreen";
@@ -25,6 +8,7 @@ import Toast        from "./components/Toast";
 import useAura      from "./hooks/useAura";
 
 export default function App() {
+  const [modeLocked, setModeLocked] = useState(false);
   const [screen, setScreen] = useState("home");
   const [mode, setMode]     = useState(() =>
     localStorage.getItem("aura_mode") || "stranger");
@@ -32,8 +16,24 @@ export default function App() {
   const [toast, setToast]   = useState(null);
 
   const { process, startSession, loading, error } = useAura();
+  const [msgIndex, setMsgIndex] = useState(0);
 
-  useEffect(() => { startSession(); }, []);
+  const messages = [
+    "Analyzing input...",
+    "Running FAM protocols...",
+    "Evaluating risk...",
+    "Generating response..."
+  ];
+  //useEffect(() => { startSession(); }, []);
+  useEffect(() => {
+    if (!loading) return;
+
+    const interval = setInterval(() => {
+      setMsgIndex((prev) => (prev + 1) % messages.length);
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const showToast = (msg, ms = 3000) => {
     setToast(msg);
@@ -49,6 +49,7 @@ export default function App() {
   };
 
   const handleSubmit = async (text) => {
+    setModeLocked(true);
     if (!text.trim()) return;
     try {
       const data = await process(text, mode);
@@ -56,42 +57,62 @@ export default function App() {
       setScreen("guidance");
     } catch (err) {
       showToast(`❌ ${err.message}. Check backend connection.`);
->>>>>>> 73ffa1e (frontend updated)
     }
   };
 
   return (
-<<<<<<< HEAD
-    <div>
-      <InputBox onSubmit={handleSubmit} />
-      <ResponseBox data={response} />
+    <div className="min-h-screen bg-navy">
+      
+      {/* Centered app container */}
+      <div className="max-w-5xl mx-auto relative">
+
+        <ModeToggle mode={mode} onToggle={handleModeToggle} disabled={modeLocked}/>
+
+        {loading && (
+          <div className="fixed inset-0 bg-navy/90 backdrop-blur-sm z-[9998]
+                          flex flex-col items-center justify-center gap-5">
+            <div className="w-16 h-16 rounded-full border-4 border-electric/20
+                            border-t-electric animate-spin" />
+            <p className="text-white font-semibold text-lg">{messages[msgIndex]}</p>
+            <p className="text-white/40 text-sm">Processing all 8 agents</p>
+          </div>
+        )}
+
+        {screen === "home" && (
+          <HomeScreen 
+            mode={mode} 
+            onStart={() => setScreen("input")} 
+            onHistory={() => {}} 
+          />
+        )}
+
+        {screen === "input" && (
+          <InputScreen 
+            mode={mode} 
+            onBack={() => setScreen("home")} 
+            onSubmit={handleSubmit} 
+            loading={loading} 
+          />
+        )}
+
+        {screen === "guidance" && result && (
+          <GuidanceScreen 
+            result={result} 
+            onBack={() => setScreen("input")} 
+            onViewMap={() => setScreen("map")} 
+          />
+        )}
+
+        {screen === "map" && (
+          <MapScreen 
+            result={result} 
+            onBack={() => setScreen("guidance")} 
+          />
+        )}
+
+        <Toast message={toast} />
+
+      </div>
     </div>
   );
 }
-
-export default App;
-=======
-    <div className="relative">
-      <ModeToggle mode={mode} onToggle={handleModeToggle} />
-
-      {/* Loading Overlay */}
-      {loading && (
-        <div className="fixed inset-0 bg-navy/90 backdrop-blur-sm z-[9998]
-                        flex flex-col items-center justify-center gap-5">
-          <div className="w-16 h-16 rounded-full border-4 border-electric/20
-                          border-t-electric animate-spin" />
-          <p className="text-white font-semibold text-lg">AURA is analyzing...</p>
-          <p className="text-white/40 text-sm">Processing all 8 agents</p>
-        </div>
-      )}
-
-      {screen === "home"     && <HomeScreen mode={mode} onStart={() => setScreen("input")} onHistory={() => {}} />}
-      {screen === "input"    && <InputScreen mode={mode} onBack={() => setScreen("home")} onSubmit={handleSubmit} loading={loading} />}
-      {screen === "guidance" && result && <GuidanceScreen result={result} onBack={() => setScreen("input")} onViewMap={() => setScreen("map")} />}
-      {screen === "map"      && <MapScreen result={result} onBack={() => setScreen("guidance")} />}
-
-      <Toast message={toast} />
-    </div>
-  );
-}
->>>>>>> 73ffa1e (frontend updated)

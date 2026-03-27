@@ -208,3 +208,33 @@ def _compute_trend(session_scores: list[float]) -> float:
    if len(recent) < 2: return 0.0
    return max(0.0, min(1.0, (recent[-1] - recent[0]) / len(recent)))
 
+# ─────────────────────────────────────────────
+# PUBLIC COMPATIBILITY WRAPPER (DO NOT REMOVE)
+# ─────────────────────────────────────────────
+async def process(text: str, fam_data: dict, mode: str):
+    payload = {"text": text}
+
+    class DummyReq:
+        def __init__(self):
+            self.session_id = "demo_session"
+            self.turn_number = 1
+
+    result = await score(payload, DummyReq())
+
+    #  TRANSPORT LOGIC (CRITICAL ADDITION)
+    if result.risk_level.value == "CRITICAL":
+        transport = "AMBULANCE"
+    elif result.risk_level.value == "HIGH":
+        transport = "AMBULANCE"
+    elif result.risk_level.value == "MEDIUM":
+        transport = "PRIORITY_CAB"
+    else:
+        transport = "NONE"
+
+    return {
+        "risk_level": result.risk_level.value,
+        "risk_score": result.composite,
+        "transport": transport,
+        "calibration_mode": result.calibration_mode.value,
+        "signals": result.signals
+    }

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 
-export default function ModeToggle({ mode, onToggle }) {
+export default function ModeToggle({ mode, onToggle, disabled }) {
   const [animating, setAnimating] = useState(false);
 
   const handleToggle = (newMode) => {
+    if (disabled) return; 
     if (newMode === mode) return;
     setAnimating(true);
     setTimeout(() => setAnimating(false), 300);
@@ -11,8 +12,9 @@ export default function ModeToggle({ mode, onToggle }) {
   };
 
   return (
-    <div className="fixed top-4 right-4 z-50 bg-white/95 backdrop-blur-md
-                    rounded-3xl p-1 shadow-xl flex items-center gap-1 border border-gray-100">
+    <div className="top-4 right-4 fixed md:absolute z-50 bg-white/95 backdrop-blur-md
+                    rounded-3xl p-1 shadow-xl flex items-center gap-1 border border-gray-100
+                    transition-all duration-300 ease-in-out">
 
       {/* Personal Mode Pill */}
       <button
@@ -20,6 +22,7 @@ export default function ModeToggle({ mode, onToggle }) {
         title="Personal Mode — uses your medical profile"
         className={`
           flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl text-xs font-bold
+          ${disabled ? "opacity-50 cursor-not-allowed" : ""}
           transition-all duration-300 ease-[cubic-bezier(.34,1.56,.64,1)]
           focus:outline-none select-none tracking-wide
           ${mode === "personal"
@@ -43,6 +46,7 @@ export default function ModeToggle({ mode, onToggle }) {
         title="Stranger/Helper Mode — no profile, safe defaults"
         className={`
           flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl text-xs font-bold
+          ${disabled ? "opacity-50 cursor-not-allowed" : ""}
           transition-all duration-300 ease-[cubic-bezier(.34,1.56,.64,1)]
           focus:outline-none select-none tracking-wide
           ${mode === "stranger"
