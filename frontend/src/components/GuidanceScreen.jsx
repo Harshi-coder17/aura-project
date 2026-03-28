@@ -1,11 +1,19 @@
 // frontend/src/components/GuidanceScreen.jsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 const RISK_STYLES = {
   LOW:      { badge: "bg-green-100 text-green-800",         label: "✅ LOW RISK",  border: "border-green-400" },
   MEDIUM:   { badge: "bg-amber-100 text-amber-800",         label: "⚠️ MODERATE",  border: "border-amber-400" },
   HIGH:     { badge: "bg-red-100 text-red-800",             label: "🚨 HIGH RISK", border: "border-red-500"   },
   CRITICAL: { badge: "bg-red-600 text-white animate-pulse", label: "🆘 CRITICAL",  border: "border-red-600"   },
+};
+
+// Human-readable calibration mode labels for display
+const CALIBRATION_LABELS = {
+  PASSTHROUGH:     "Standard",
+  HEDGE_INJECT:    "Cautious",
+  FULL_REWRITE:    "Emergency",
+  CRISIS_REDIRECT: "Crisis",
 };
 
 export default function GuidanceScreen({ result, onBack, onViewMap }) {
@@ -17,51 +25,81 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
   const echo    = result?.echo_result    || {};
   const style   = RISK_STYLES[risk] || RISK_STYLES.LOW;
 
-  const transport     = action.transport || "";
-  const isAmbulance   = transport === "AMBULANCE";
-  const isCab         = transport === "PRIORITY_CAB";
-  const famSeverity   = fam.severity || "";
+  const transport   = action.transport || "";
+  const isAmbulance = transport === "AMBULANCE";
+  const isCab       = transport === "PRIORITY_CAB";
+  const famSeverity = fam.severity || "";
 
-  // Show ambulance button when: transport is AMBULANCE
+  // Show ambulance for AMBULANCE transport
   const showAmbulance = isAmbulance;
 
-  // Show cab button when:
-  // - transport is PRIORITY_CAB, OR
-  // - transport is AMBULANCE AND severity is HIGH (not CRITICAL) — give user the choice
-  const showCab = isCab || (isAmbulance && famSeverity === "HIGH");
+  // Show cab when:
+  // - transport IS priority cab, OR
+  // - transport is ambulance AND (severity is HIGH or CRITICAL) — user gets choice
+  const showCab = isCab || (isAmbulance && ["HIGH", "CRITICAL"].includes(famSeverity));
 
   const [holdProgress, setHoldProgress] = useState(0);
-  const [voicePlayed, setVoicePlayed]   = useState(false);
   const holdIntervalRef = useRef(null);
   const holdTimerRef    = useRef(null);
+  const synthRef        = useRef(null); // keep utterance reference alive
 
-  // Auto-play voice for HIGH / CRITICAL only
-  useEffect(() => {
-    if (isPanic && result?.voice_text && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utter  = new SpeechSynthesisUtterance(result.voice_text);
-      utter.rate   = 0.82;
-      utter.pitch  = 1.0;
-      utter.volume = 1.0;
-      utter.onend  = () => setVoicePlayed(true);
+  // ── Voice synthesis helper ────────────────────────────────────────
+  const speakText = useCallback((text) => {
+    if (!text || !("speechSynthesis" in window)) return;
+
+    // Cancel any ongoing speech first
+    window.speechSynthesis.cancel();
+
+    // Small delay ensures cancel() completes before new utterance
+    setTimeout(() => {
+      const utter   = new SpeechSynthesisUtterance(text);
+      utter.rate    = 0.82;
+      utter.pitch   = 1.0;
+      utter.volume  = 1.0;
+      utter.lang    = "en-IN";
+
+      // Chrome bug: long utterances get cut off — keep synthesis alive
+      const keepAlive = setInterval(() => {
+        if (!window.speechSynthesis.speaking) {
+          clearInterval(keepAlive);
+        } else {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 10000);
+
+      utter.onend = () => clearInterval(keepAlive);
+      utter.onerror = (e) => {
+        clearInterval(keepAlive);
+        console.warn("[Voice] Speech error:", e.error);
+      };
+
+      synthRef.current = utter;
       window.speechSynthesis.speak(utter);
-      setVoicePlayed(true);
+    }, 100);
+  }, []);
+
+  // ── Auto-play for HIGH / CRITICAL on mount ────────────────────────
+  useEffect(() => {
+    if (isPanic && result?.voice_text) {
+      // Delay slightly so component is fully rendered
+      const t = setTimeout(() => speakText(result.voice_text), 400);
+      return () => {
+        clearTimeout(t);
+        window.speechSynthesis?.cancel();
+      };
     }
     return () => window.speechSynthesis?.cancel();
-  }, [result, isPanic]);
+  }, [result?.voice_text, isPanic, speakText]);
 
+  // ── Manual voice button handler ───────────────────────────────────
   const handleVoice = () => {
-    if (!result?.voice_text || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const u  = new SpeechSynthesisUtterance(result.voice_text);
-    u.rate   = 0.82;
-    u.pitch  = 1.0;
-    u.volume = 1.0;
-    u.onend  = () => setVoicePlayed(true);
-    window.speechSynthesis.speak(u);
-    setVoicePlayed(true);
+    const text = result?.voice_text;
+    if (!text) return;
+    speakText(text);
   };
 
+  // ── Hold-to-call ambulance ────────────────────────────────────────
   const startHold = () => {
     let progress = 0;
     holdIntervalRef.current = setInterval(() => {
@@ -80,7 +118,14 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
     setHoldProgress(0);
   };
 
-  useEffect(() => () => cancelHold(), []);
+  // Cleanup on unmount
+  useEffect(() => () => {
+    cancelHold();
+    window.speechSynthesis?.cancel();
+  }, []);
+
+  // Human-readable mode label
+  const modeLabel = CALIBRATION_LABELS[echo.calibration_mode] || echo.calibration_mode || "";
 
   return (
     <div className={`min-h-screen bg-white flex flex-col px-6 pt-20 pb-8
@@ -92,7 +137,7 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
         ←
       </button>
 
-      {/* Risk Badge */}
+      {/* ── Risk Badge ───────────────────────────────────────────── */}
       <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full
                        text-sm font-bold self-start ${style.badge}`}>
         {style.label}
@@ -101,15 +146,15 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
         </span>
       </div>
 
-      {/* Injury Summary */}
+      {/* ── Injury Summary ───────────────────────────────────────── */}
       <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
         <div className="font-extrabold text-navy text-base uppercase tracking-wide">
           {fam.injury || "Assessing condition…"}
         </div>
         <div className="text-gray-500 text-xs mt-1">
           Severity: {fam.severity || "—"}
-          {fam.body_part         ? ` • ${fam.body_part}`               : ""}
-          {echo.calibration_mode ? ` • Mode: ${echo.calibration_mode}` : ""}
+          {fam.body_part ? ` • ${fam.body_part}` : ""}
+          {modeLabel     ? ` • Response: ${modeLabel}` : ""}
         </div>
         {fam.personal_flags?.length > 0 && (
           <div className="mt-2 text-xs text-amber-700 bg-amber-50
@@ -119,7 +164,7 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
         )}
       </div>
 
-      {/* Transport label */}
+      {/* ── Transport label ──────────────────────────────────────── */}
       {transport && (
         <div className="text-sm text-gray-500">
           Recommended Transport:{" "}
@@ -131,7 +176,7 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
         </div>
       )}
 
-      {/* Steps */}
+      {/* ── Steps ───────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3">
         {steps.map((step, i) => (
           <div key={i}
@@ -150,31 +195,32 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
         ))}
       </div>
 
-      {/* ── Action Buttons ─────────────────────────────────────────── */}
+      {/* ── Action Buttons ───────────────────────────────────────── */}
       <div className="flex gap-3">
 
         {/* AMBULANCE — hold to call */}
         {showAmbulance && (
           <div className="flex-1 bg-red-50 border border-red-200 rounded-2xl
-                          p-4 flex flex-col gap-3 relative overflow-hidden">
+                          p-4 flex flex-col gap-2 relative overflow-hidden">
+            {/* Card-level progress fill */}
             <div
               className="absolute left-0 top-0 h-full bg-red-200/40
                          transition-all duration-100 pointer-events-none"
               style={{ width: `${holdProgress}%` }}
             />
             <div className="relative z-10 flex flex-col items-center gap-2">
-              <span className="text-5xl">🚑</span>
-              <span className="text-base font-bold text-red-700">
+              <span className="text-4xl">🚑</span>
+              <span className="text-sm font-bold text-red-700 text-center">
                 Call Ambulance
+                {showCab && famSeverity === "HIGH" && (
+                  <span className="block text-xs text-red-400 font-normal">
+                    If condition is worsening
+                  </span>
+                )}
               </span>
-              {famSeverity === "HIGH" && (
-                <span className="text-xs text-red-400 text-center">
-                  If condition worsens
-                </span>
-              )}
               <button
-                className="relative mt-2 w-full border-2 border-red-500
-                           bg-red-50 text-red-600 py-4 rounded-xl font-semibold
+                className="relative w-full border-2 border-red-500
+                           bg-white text-red-600 py-3 rounded-xl font-semibold
                            flex flex-col items-center gap-1 overflow-hidden
                            active:scale-95 transition-transform select-none
                            focus:outline-none"
@@ -185,15 +231,15 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
                 onTouchEnd={cancelHold}
                 onTouchCancel={cancelHold}
               >
-                <span className="text-2xl">🚑</span>
-                <span className="text-base font-bold">
+                <span className="text-xl">🚑</span>
+                <span className="text-sm font-bold">
                   {holdProgress > 0 ? "Calling…" : "Call Ambulance"}
                 </span>
-                <span className="text-xs text-red-500/80">
-                  Press &amp; hold 3 seconds
+                <span className="text-xs text-red-400">
+                  Hold 3 seconds
                 </span>
                 <div
-                  className="absolute bottom-0 left-0 h-1.5 bg-red-500
+                  className="absolute bottom-0 left-0 h-1 bg-red-500
                              transition-all duration-100"
                   style={{ width: `${holdProgress}%` }}
                 />
@@ -209,14 +255,16 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
               window.open("https://www.google.com/maps/search/cabs+near+me")
             }
             className="flex-1 border-2 border-amber-400 bg-amber-50
-                       text-amber-700 rounded-2xl p-5 font-bold flex flex-col
-                       items-center gap-2 active:scale-95 transition-transform"
+                       text-amber-700 rounded-2xl p-4 font-bold flex flex-col
+                       items-center justify-center gap-2 active:scale-95 transition-transform"
           >
-            <span className="text-3xl">🚕</span>
-            <span className="text-base font-bold">Book Priority Cab</span>
-            <span className="text-xs text-amber-700/80 text-center">
+            <span className="text-4xl">🚕</span>
+            <span className="text-sm font-bold text-center">
+              Book Priority Cab
+            </span>
+            <span className="text-xs text-amber-600 text-center leading-snug">
               {isAmbulance
-                ? "Or take cab if closer"
+                ? "Or cab if ambulance unavailable"
                 : "Fast transport to hospital"}
             </span>
             <span className="text-xs font-semibold text-amber-800">
@@ -228,24 +276,29 @@ export default function GuidanceScreen({ result, onBack, onViewMap }) {
         {/* FIND HOSPITALS — always visible */}
         <button
           onClick={onViewMap}
-          className="flex-1 bg-blue-50 text-navy rounded-2xl p-5 flex
+          className="flex-1 bg-blue-50 text-navy rounded-2xl p-4 flex
                      flex-col items-center justify-center gap-2
                      active:scale-95 transition-all border border-blue-100
                      hover:bg-blue-100"
         >
           <span className="text-3xl">🏥</span>
-          <span className="text-base font-bold">Find Hospitals</span>
+          <span className="text-sm font-bold">Find Hospitals</span>
           <span className="text-xs text-gray-500">View nearby &amp; ETA</span>
-          <span className="text-xs text-blue-600 font-semibold">Open Map →</span>
+          <span className="text-xs text-blue-600 font-semibold">
+            Open Map →
+          </span>
         </button>
       </div>
 
-      {/* Voice Button — works for all risk levels */}
+      {/* ── Voice Button — always present, works on click ────────── */}
       {result?.voice_text && (
         <button
           onClick={handleVoice}
-          className="w-full border-2 border-electric text-electric rounded-2xl
-                     py-3 font-bold text-sm hover:bg-electric/5 transition-colors"
+          className={`w-full border-2 rounded-2xl py-3 font-bold text-sm
+                      transition-colors
+                      ${isPanic
+                        ? "border-red-400 text-red-600 hover:bg-red-50"
+                        : "border-electric text-electric hover:bg-electric/5"}`}
         >
           {isPanic
             ? "🔊 Replay Voice Instructions"

@@ -29,6 +29,11 @@ def _rule_check(step: str) -> tuple[bool, str]:
 
 
 def _build_steps_from_protocol(fam: FAMResult, mode: CalibrationMode) -> list[str]:
+    """
+    Return protocol steps shaped for the calibration mode.
+    Steps are NEVER word-truncated — full sentences always preserved.
+    FULL_REWRITE limits to first 3 steps only (no mid-sentence cuts).
+    """
     base = list(fam.protocol_steps)
     if not base:
         return [
@@ -38,11 +43,8 @@ def _build_steps_from_protocol(fam: FAMResult, mode: CalibrationMode) -> list[st
         ]
 
     if mode == CalibrationMode.FULL_REWRITE:
-        trimmed = []
-        for step in base[:3]:
-            words = step.split()
-            trimmed.append(" ".join(words[:12]) + ("…" if len(words) > 12 else ""))
-        return trimmed
+        # Return first 3 complete steps — no word trimming
+        return base[:3]
 
     if mode == CalibrationMode.HEDGE_INJECT:
         steps  = base[:5]
@@ -88,27 +90,19 @@ async def _llm_draft(fam: FAMResult, mode: CalibrationMode) -> list[str]:
 def _resolve_calibration_mode(
     echo: ECHOResult, action: ActionPlan
 ) -> CalibrationMode:
-    """
-    Resolve effective calibration mode.
-    When an ambulance has been dispatched (from medical override or severity
-    override), the user is in a high-stress situation regardless of ECHO score.
-    Force FULL_REWRITE so they get max 3 simple steps.
-    CRISIS_REDIRECT always takes priority.
-    """
     if echo.calibration_mode == CalibrationMode.CRISIS_REDIRECT:
         return CalibrationMode.CRISIS_REDIRECT
-
     if action.transport == TransportMode.AMBULANCE:
         return CalibrationMode.FULL_REWRITE
-
     return echo.calibration_mode
 
 
 def _calibrate(steps: list[str], mode: CalibrationMode) -> list[str]:
+    """Limit step count per mode. No word-level truncation."""
     if mode == CalibrationMode.FULL_REWRITE:
         return steps[:3]
     if mode == CalibrationMode.HEDGE_INJECT:
-        steps  = steps[:5]
+        steps = steps[:5]
         caveat = (
             "If symptoms worsen or you are unsure, "
             "call emergency services (108) immediately."
@@ -119,13 +113,14 @@ def _calibrate(steps: list[str], mode: CalibrationMode) -> list[str]:
 
 
 def _build_voice(steps: list[str], mode: CalibrationMode) -> str:
+    """
+    Build voice text from FULL sentences — no word trimming.
+    FULL_REWRITE uses first 3 steps, others use up to 5.
+    """
     limit = 3 if mode == CalibrationMode.FULL_REWRITE else 5
     parts = []
     for i, s in enumerate(steps[:limit], 1):
-        clean_text = s.strip()
-        if mode == CalibrationMode.FULL_REWRITE:
-            clean_text = " ".join(clean_text.split()[:12])
-        parts.append(f"Step {i}: {clean_text}.")
+        parts.append(f"Step {i}: {s.strip()}.")
     return " ".join(parts)
 
 
@@ -136,10 +131,9 @@ async def generate(
 ) -> tuple[list[str], str, int, int]:
     """Returns (safe_steps, voice_text, blocked_count, safe_count)."""
 
-    # Resolve effective calibration mode
     effective_mode = _resolve_calibration_mode(echo, action)
 
-    # Crisis redirect — fixed response
+    # Crisis redirect — fixed response, no LLM
     if effective_mode == CalibrationMode.CRISIS_REDIRECT:
         steps = [
             "Please call emergency services (108 or 112) RIGHT NOW.",
@@ -148,7 +142,7 @@ async def generate(
         ]
         return steps, "Please call 108 immediately. You are not alone.", 0, 3
 
-    # Attempt LLM draft, fall back to protocol steps
+    # Try LLM, fall back to protocol steps
     draft = []
     if _openai_client and settings.OPENAI_API_KEY:
         try:
@@ -160,7 +154,7 @@ async def generate(
     if not draft:
         draft = _build_steps_from_protocol(fam, effective_mode)
 
-    # Medical rule engine — validate every step
+    # Medical rule engine
     safe_steps: list[str] = []
     blocked = 0
     for step in draft:
