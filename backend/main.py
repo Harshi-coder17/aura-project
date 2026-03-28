@@ -1,24 +1,27 @@
+# File: backend/main.py
+
 import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel   
+from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
-from typing import List, Optional, Dict, Any  
+from typing import List, Optional, Dict, Any
 
-
-# Load env
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-# Local imports
 from aura.config import settings
 from aura.database import init_db
+from aura.models import (
+    ProcessRequest, UserMode,
+    FAMResult, ECHOResult, ActionPlan,
+    SeverityLevel, CalibrationMode, TransportMode
+)
+from aura.api.middleware import rate_limit_middleware
 
-
-# ── SAFE IMPORT AGENTS ───────────────────────────
 try:
     from aura.agents import (
         input_processor, fam_agent, echo_engine,
@@ -26,27 +29,23 @@ try:
         audit_layer, action_layer
     )
     AGENTS_READY = True
-except ImportError:
+except ImportError as e:
     AGENTS_READY = False
-    print("[WARN] AI agents not available — running in SAFE MODE")
+    print(f"[WARN] AI agents not available — running in SAFE MODE: {e}")
 
 
-# ────────────────────────────────────────────────
-#  REQUEST MODEL 
-# ────────────────────────────────────────────────
-class ProcessRequest(BaseModel):
+class RawProcessRequest(BaseModel):
     text: str
-    mode: str
+    mode: str = "stranger"
     session_id: Optional[str] = None
     language: Optional[str] = "en"
-    location: Optional[str] = None
+    location: Optional[Dict[str, float]] = None
     image_url: Optional[str] = None
     turn_number: int = 1
+    user_id: Optional[str] = None
 
-# ────────────────────────────────────────────────
-#  RESPONSE MODEL
-# ────────────────────────────────────────────────
-class ProcessResponse(BaseModel):
+
+class ProcessResponseOut(BaseModel):
     session_id: str
     turn_id: str
     risk_level: str
@@ -56,9 +55,10 @@ class ProcessResponse(BaseModel):
     fam_result: Dict[str, Any]
     echo_result: Dict[str, Any]
     voice_text: str
+    dispatch_status: str = "NONE"
+    audit_id: str
 
 
-# ── LIFECYCLE ────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
@@ -76,10 +76,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-
-# ────────────────────────────────────────────────
-# CORS (safe default)
-# ────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -88,171 +84,204 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.middleware("http")(rate_limit_middleware)
 
-# ════════════════════════════════════════════════
-#  MAIN ENDPOINT 
-# ════════════════════════════════════════════════
-@app.post("/api/v1/process", response_model=ProcessResponse)
-async def process(data: ProcessRequest):
 
+def _build_typed_request(raw: RawProcessRequest) -> ProcessRequest:
+    mode_str = (raw.mode or "stranger").lower().strip()
     try:
-        req = data.dict()
-        print(" DATA RECEIVED:", req)
-    except Exception as e:
-        print("❌ JSON ERROR:", e)
-        raise HTTPException(status_code=400, detail="Invalid JSON")
+        mode_enum = UserMode(mode_str)
+    except ValueError:
+        mode_enum = UserMode.STRANGER
+    return ProcessRequest(
+        session_id  = raw.session_id or str(uuid.uuid4()),
+        user_id     = raw.user_id,
+        mode        = mode_enum,
+        text        = raw.text.strip(),
+        image_url   = raw.image_url,
+        location    = raw.location,
+        language    = raw.language or "en",
+        turn_number = raw.turn_number,
+    )
+
+
+def _fuse_display_risk(fam: FAMResult, echo: ECHOResult) -> tuple[str, float]:
+    """
+    FAM severity sets the floor; ECHO can push it higher.
+    CRITICAL/HIGH FAM → never display LOW.
+    """
+    fam_sev    = fam.severity.value
+    echo_level = echo.risk_level.value
+    echo_score = echo.composite
+
+    if fam_sev == "CRITICAL":
+        return "CRITICAL", max(echo_score, 0.90)
+    if fam_sev == "HIGH":
+        if echo_level in ("HIGH", "CRITICAL"):
+            return echo_level, echo_score
+        return "MEDIUM", max(echo_score, 0.55)
+    if fam_sev == "MODERATE":
+        if echo_level in ("HIGH", "CRITICAL"):
+            return echo_level, echo_score
+        if echo_level == "MEDIUM":
+            return "MEDIUM", echo_score
+        return "MEDIUM", max(echo_score, 0.42)
+    # MINOR — pure ECHO
+    return echo_level, echo_score
+
+
+def _get_effective_calibration(
+    echo: ECHOResult, action: ActionPlan
+) -> str:
+    """
+    The calibration mode that response_engine actually used.
+    This is what the frontend should display and what tests should assert.
+    """
+    if echo.calibration_mode == CalibrationMode.CRISIS_REDIRECT:
+        return "CRISIS_REDIRECT"
+    if action.transport == TransportMode.AMBULANCE:
+        return "FULL_REWRITE"
+    return echo.calibration_mode.value
+
+
+@app.post("/api/v1/process", response_model=ProcessResponseOut)
+async def process(raw: RawProcessRequest):
+
+    if not AGENTS_READY:
+        raise HTTPException(status_code=503, detail="AI agents not yet initialized.")
+
+    if not raw.text or not raw.text.strip():
+        raise HTTPException(status_code=400, detail="text field cannot be empty")
 
     turn_id = str(uuid.uuid4())[:8].upper()
+    req     = _build_typed_request(raw)
 
-    # ─────────────────────────────────────────────
-    #  INPUT EXTRACTION
-    # ─────────────────────────────────────────────
-    text = req.get("text", "").strip()
-    mode = req.get("mode", "UNKNOWN")
-    session_id = req.get("session_id", "unknown")
-    payload = await input_processor.process_input(data)
-    # ─────────────────────────────────────────────
-    #  AGENT EXECUTION PIPELINE
-    # ─────────────────────────────────────────────
-    fam_output = await fam_agent.analyze(payload, data)
+    try:
+        payload     = await input_processor.process_input(req)
+        fam_result  = await fam_agent.analyze(payload, req)
+        echo_result = await echo_engine.score(payload, req)
+        ctx_result  = await context_agent.enrich(payload, req)
+        action_plan = await decision_engine.decide(fam_result, echo_result, ctx_result, req)
 
-    # convert to dict (important)
-    fam_result = fam_output.dict()
-   
-    echo_output = await echo_engine.score(payload, data)
-
-    echo_result = {
-        "risk_level": echo_output.risk_level.value,
-        "risk_score": echo_output.composite,
-        "calibration_mode": echo_output.calibration_mode.value,
-        "signals": echo_output.signals
-    }
-
-    # ─────────────────────────────────────────────
-    #  SAFE FALLBACK (ONLY IF AGENTS FAIL)
-    # ─────────────────────────────────────────────
-    if not fam_result:
-        fam_result = {
-            "injury": "Preliminary Classification",
-            "severity": "LOW",
-            "body_part": "Undetermined",
-            "first_aid": [],
-            "personal_flags": []
-        }
-
-    if not echo_result:
-        echo_result = {
-            "risk_level": "LOW",
-            "risk_score": 0.35,
-            "transport": "NONE",
-            "calibration_mode": mode
-        }
-
-    # ─────────────────────────────────────────────
-    #  RISK FUSION (FAM + ECHO)  
-    # ─────────────────────────────────────────────
-    fam_severity = fam_result.get("severity", "LOW")
-
-    # Normalize (important if enum/string mix)
-    if isinstance(fam_severity, str):
-        fam_severity = fam_severity.upper()
-
-    #  MEDICAL OVERRIDE
-    if fam_severity in ["CRITICAL", "HIGH"]:
-        risk_level = "HIGH"
-        risk_score = max(echo_result.get("risk_score", 0.5), 0.85)
-        transport = "AMBULANCE"
-
-    elif fam_severity == "MODERATE":
-        risk_level = "MEDIUM"
-        risk_score = max(echo_result.get("risk_score", 0.4), 0.6)
-        transport = "PRIORITY_CAB"
-
-    else:
-        # fallback to behavioral model (ECHO)
-        risk_level = echo_result.get("risk_level", "LOW")
-        risk_score = echo_result.get("risk_score", 0.35)
-        transport = echo_result.get("transport", "NONE")
-
-    # ─────────────────────────────────────────────
-    #  DYNAMIC RESPONSE STEPS 
-    # ─────────────────────────────────────────────
-    steps = []
-
-    # Step 1: Input awareness
-    steps.append(f"Input received: '{text}'")
-
-    # Step 2: Mode
-    steps.append(f"Operating mode: {mode}")
-
-    # Step 3: Session tracking
-    steps.append(f"Session trace ID: {session_id[:8]}")
-
-    # Step 4: FAM RESULT
-    if fam_result.get("injury"):
-        steps.append(f"Detected condition: {fam_result['injury']}")
-
-    if fam_result.get("body_part"):
-        steps.append(f"Affected area: {fam_result['body_part']}")
-
-    # Step 5+: FIRST AID (CORE FROM FAM)
-    first_aid_steps = fam_result.get("protocol_steps", [])
-    for step in first_aid_steps:
-        steps.append(step)
-
-    # Step N: Risk evaluation (ECHO)
-    steps.append(f"Risk assessment → {risk_level} ({int(risk_score * 100)}%)")
-
-    # Step N+1: Decision (ECHO)
-    if transport == "AMBULANCE":
-        steps.append("Emergency response required → Call ambulance immediately")
-    elif transport == "PRIORITY_CAB":
-        steps.append("Urgent condition → Reach nearest hospital quickly")
-    else:
-        steps.append("Condition stable → Monitor and follow precautions")
-
-    # ─────────────────────────────────────────────
-    #  FINAL RESPONSE
-    # ─────────────────────────────────────────────
-    return {
-        "session_id": session_id,
-        "turn_id": turn_id,
-
-        "risk_level": risk_level,
-        "risk_score": risk_score,
-
-        "response_steps": steps,
-
-        "action_plan": {
-            "transport": transport
-        },
-
-        "fam_result": fam_result,
-        "echo_result": echo_result,
-
-        "voice_text": (
-            f"Detected {fam_result.get('injury', 'condition')}. "
-            f"Risk level {risk_level}. "
-            + (
-                "Immediate emergency assistance required."
-                if transport == "AMBULANCE"
-                else "Follow the recommended first aid steps."
-            )
+        steps, voice_text, blocked, safe = await response_engine.generate(
+            fam_result, echo_result, action_plan
         )
+
+        dispatch_result = await action_layer.execute(
+            action_plan, req.session_id, req.location
+        )
+
+        audit_id = await audit_layer.log(
+            req, fam_result, echo_result, action_plan,
+            steps, blocked,
+            dispatch_result.get("dispatch_status", "NONE")
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # Effective calibration mode (what response_engine actually used)
+    effective_cal = _get_effective_calibration(echo_result, action_plan)
+
+    fam_dict = {
+        "injury":            fam_result.injury,
+        "severity":          fam_result.severity.value,
+        "confidence":        fam_result.confidence,
+        "body_part":         fam_result.body_part,
+        "protocol_code":     fam_result.protocol_code,
+        "protocol_steps":    fam_result.protocol_steps,
+        "contraindications": fam_result.contraindications,
+        "personal_flags":    fam_result.personal_flags,
     }
-# ── HEALTH CHECK ────────────────────────────────
+
+    echo_dict = {
+        "risk_level":        echo_result.risk_level.value,
+        "risk_score":        echo_result.composite,
+        # Return the EFFECTIVE calibration mode, not raw ECHO value
+        "calibration_mode":  effective_cal,
+        "signals":           echo_result.signals,
+        "ml_score":          echo_result.ml_score,
+        "rule_score":        echo_result.rule_score,
+        "context_score":     echo_result.context_score,
+        "flag_critical":     echo_result.flag_critical,
+    }
+
+    action_dict = {
+        "transport":          action_plan.transport.value,
+        "response_mode":      action_plan.response_mode,
+        "escalate_to_doctor": action_plan.escalate_to_doctor,
+        "notify_contacts":    action_plan.notify_contacts,
+        "rationale":          action_plan.rationale,
+        "hospital": (
+            {
+                "name":        action_plan.hospital.name,
+                "distance_km": action_plan.hospital.distance_km,
+                "eta_minutes": action_plan.hospital.eta_minutes,
+                "address":     action_plan.hospital.address,
+                "phone":       action_plan.hospital.phone,
+                "capability":  action_plan.hospital.capability,
+            }
+            if action_plan.hospital else None
+        ),
+    }
+
+    display_risk_level, display_risk_score = _fuse_display_risk(fam_result, echo_result)
+
+    return ProcessResponseOut(
+        session_id      = req.session_id,
+        turn_id         = turn_id,
+        risk_level      = display_risk_level,
+        risk_score      = display_risk_score,
+        response_steps  = steps,
+        action_plan     = action_dict,
+        fam_result      = fam_dict,
+        echo_result     = echo_dict,
+        voice_text      = voice_text,
+        dispatch_status = dispatch_result.get("dispatch_status", "NONE"),
+        audit_id        = audit_id,
+    )
+
+
+@app.post("/api/v1/session/start")
+async def start_session():
+    return {"session_id": str(uuid.uuid4()), "status": "ok"}
+
+
+@app.get("/api/v1/hospitals")
+async def get_hospitals(lat: float = 0.0, lon: float = 0.0):
+    if AGENTS_READY:
+        hospitals = await context_agent._get_hospitals(
+            {"lat": lat, "lon": lon} if (lat or lon) else None
+        )
+        return {
+            "hospitals": [
+                h.model_dump() if hasattr(h, "model_dump") else h.dict()
+                for h in hospitals
+            ]
+        }
+    return {"hospitals": []}
+
+
+@app.get("/api/v1/audit")
+async def get_audit(limit: int = 50):
+    return {"logs": audit_layer.get_recent_logs(limit)}
+
+
 @app.get("/api/v1/health")
 async def health():
     return {
-        "status": "ok",
-        "service": "AURA",
-        "environment": settings.ENVIRONMENT
+        "status":       "ok",
+        "service":      "AURA",
+        "version":      settings.VERSION,
+        "agents_ready": AGENTS_READY,
+        "environment":  settings.ENVIRONMENT,
     }
 
 
-# ── RUN SERVER ─────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
-
-    print("DB URL:", settings.DATABASE_URL)

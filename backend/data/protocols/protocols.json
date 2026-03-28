@@ -1,128 +1,151 @@
 {
- "BURN_SEVERE_001": {
-   "name": "Severe Thermal Burn",
-   "keywords": ["burn", "burnt", "scalded", "fire", "blister", "charred"],
-   "severity": "HIGH",
-   "steps": [
-     "Hold the burned area under cool (not cold) running water for 10-20 minutes immediately. Do not use ice.",
-     "Do NOT apply ice, butter, toothpaste, oil, or any cream to the burn.",
-     "Remove any jewelry or tight clothing near the burn BEFORE swelling starts.",
-     "Cover the burn loosely with a clean non-fluffy cloth or clear cling film.",
-     "Do not pop blisters. Seek emergency medical care immediately."
-   ],
-   "contraindications": ["ice_application","butter_cream","toothpaste","tight_bandage","oil"],
-   "escalation_triggers": ["face","hand","genitals","joint","electrical","chemical","large_area"]
- },
- "BURN_MINOR_002": {
-   "name": "Minor Burn First Degree",
-   "keywords": ["small burn","redness","sunburn","hot touch","mild burn"],
-   "severity": "MINOR",
-   "steps": [
-     "Cool the area immediately with cool (not cold) running water for at least 10 minutes.",
-     "Apply a gentle soothing lotion or aloe vera gel once the area has cooled completely.",
-     "Cover with a loose sterile non-adhesive bandage or clean cloth.",
-     "Take paracetamol for pain relief if needed — do NOT take ibuprofen on a burn.",
-     "Monitor for signs of infection over the next 24-48 hours (pus, increasing redness, swelling)."
-   ],
-   "contraindications": ["ice_application","butter","toothpaste","ibuprofen_topical"],
-   "escalation_triggers": ["larger_than_palm","deep","white_or_black_skin","no_pain_felt"]
- },
- "CHOKING_ADULT_001": {
-   "name": "Adult Choking",
-   "keywords": ["choking","cant breathe","food stuck","throat","heimlich","airway","not breathing","swallowed"],
-   "severity": "CRITICAL",
-   "steps": [
-     "Ask the person: Are you choking? If they cannot speak, cough, or breathe — act immediately.",
-     "Give 5 firm back blows: lean person forward, use heel of your hand between shoulder blades.",
-     "Give 5 abdominal thrusts (Heimlich): stand behind, make fist above navel, pull sharply inward and upward.",
-     "Alternate 5 back blows then 5 abdominal thrusts until the object dislodges or they lose consciousness.",
-     "If they become unconscious: lay them down, call ambulance immediately, and begin CPR."
-   ],
-   "contraindications": ["give_water","put_fingers_in_mouth","hit_on_back_while_upright_adult"],
-   "escalation_triggers": ["unconscious","infant","pregnant","not_responding"]
- },
- "FRACTURE_001": {
-   "name": "Suspected Fracture or Broken Bone",
-   "keywords": ["broken","fracture","bone","fell","snap","crack","cant move","deformed limb"],
-   "severity": "HIGH",
-   "steps": [
-     "Tell the person to stay still. Do NOT attempt to move or straighten the injured limb.",
-     "Immobilize the limb in the position found: use a splint (rolled magazine, board, umbrella) tied gently above and below the injury.",
-     "Apply a cold pack or ice wrapped in cloth — 20 minutes on, 20 minutes off — to reduce swelling.",
-     "If the bone is protruding through skin (open fracture): cover with a clean sterile cloth, do not push it in.",
-     "Keep the person warm and as still as possible. Call ambulance or arrange urgent hospital transport."
-   ],
-   "contraindications": ["realign_bone","remove_splint","apply_heat","push_exposed_bone"],
-   "escalation_triggers": ["spine","pelvis","skull","open_fracture","loss_of_sensation"]
- },
- "CARDIAC_001": {
-   "name": "Cardiac Arrest or Unresponsive Person",
-   "keywords": ["heart attack","chest pain","not breathing","unresponsive","cpr","pulse","collapsed","cardiac"],
-   "severity": "CRITICAL",
-   "steps": [
-     "CALL AMBULANCE (108/112) IMMEDIATELY — do this before anything else.",
-     "Check response: tap shoulders firmly and shout loudly. If no response and not breathing normally, begin CPR.",
-     "CPR — chest compressions: place heel of hand center of chest, push down 5-6cm, 100-120 compressions per minute.",
-     "After every 30 compressions, give 2 rescue breaths: tilt head, lift chin, pinch nose, breathe into mouth for 1 second.",
-     "Continue until ambulance arrives, the person recovers, or an AED becomes available. Use AED as soon as possible."
-   ],
-   "contraindications": ["give_food_or_water","leave_alone","stop_cpr_early"],
-   "escalation_triggers": ["always_escalate","aed_available"]
- },
- "BLEEDING_001": {
-   "name": "Severe External Bleeding",
-   "keywords": ["bleeding","blood","cut","wound","gash","laceration","hemorrhage","severed"],
-   "severity": "HIGH",
-   "steps": [
-     "Apply firm direct pressure to the wound immediately using a clean cloth or bandage — do not remove once applied.",
-     "If blood soaks through, add more layers on top — do NOT remove the first layer.",
-     "Raise the injured area above heart level if possible (unless broken bone suspected).",
-     "For limb bleeding that will not stop: apply a tourniquet 5cm above the wound, note the time applied.",
-     "Keep the person warm and still. Call ambulance for severe or uncontrolled bleeding."
-   ],
-   "contraindications": ["remove_blood_soaked_cloth","apply_tourniquet_on_joint"],
-   "escalation_triggers": ["spurting_blood","unconscious","wound_to_neck_or_chest","tourniquet_applied"]
- },
- "SEIZURE_001": {
-   "name": "Seizure or Convulsion",
-   "keywords": ["seizure","convulsion","fit","shaking","epilepsy","twitching","jerking"],
-   "severity": "HIGH",
-   "steps": [
-     "Stay calm. Time the seizure. Clear away any hard or sharp objects from around the person.",
-     "Do NOT restrain the person. Do NOT put anything in their mouth.",
-     "Cushion the person's head with something soft. Loosen any tight clothing around the neck.",
-     "When shaking stops, gently roll the person onto their side (recovery position) to keep airway clear.",
-     "Stay with them until they are fully alert. Call ambulance if it is their first seizure, lasts over 5 minutes, or they are injured."
-   ],
-   "contraindications": ["restrain_person","put_object_in_mouth","give_water_during_seizure"],
-   "escalation_triggers": ["first_seizure","over_5_minutes","no_recovery","injury","pregnant","diabetic"]
- },
- "POISONING_001": {
-   "name": "Poisoning or Toxic Ingestion",
-   "keywords": ["poison","swallowed","chemical","toxic","overdose","ate","drank something","bleach","pills"],
-   "severity": "CRITICAL",
-   "steps": [
-     "Call Poison Control (1800-11-6117 India) or emergency services (108) IMMEDIATELY.",
-     "Do NOT induce vomiting unless explicitly told to do so by Poison Control.",
-     "If the person is unconscious and not breathing normally, begin CPR.",
-     "Keep the container or packaging of the substance — tell emergency services exactly what was ingested.",
-     "Stay with the person and monitor their breathing and consciousness until help arrives."
-   ],
-   "contraindications": ["induce_vomiting_without_instruction","give_food_or_water","leave_alone"],
-   "escalation_triggers": ["always_escalate","unconscious","not_breathing","seizure"]
- },
- "DEFAULT_001": {
-   "name": "General First Aid",
-   "keywords": [],
-   "severity": "MODERATE",
-   "steps": [
-     "Stay calm and assess the situation — your composure helps the injured person.",
-     "Ensure the scene is safe before approaching — do not put yourself at risk.",
-     "Call emergency services (108) if the situation seems life-threatening or you are unsure.",
-     "Keep the person comfortable, still, and warm. Do not give food or water unless they are fully conscious.",
-     "Monitor their breathing and level of consciousness until professional help arrives."
-   ],
-   "contraindications": [],
-   "escalation_triggers": ["unresponsive","not_breathing","heavy_bleeding","suspected_poisoning"]
- }
+  "BURN_SEVERE_001": {
+    "name": "Severe Thermal Burn",
+    "keywords": ["severe burn", "bad burn", "large burn", "burned badly", "blistering", "charred", "fire burn", "scalded", "burnt badly", "chemical burn", "electrical burn", "blister"],
+    "severity": "HIGH",
+    "steps": [
+      "Hold the burned area under cool (not cold) running water for 10-20 minutes immediately. Do not use ice.",
+      "Do NOT apply ice, butter, toothpaste, oil, or any cream to the burn.",
+      "Remove any jewelry or tight clothing near the burn BEFORE swelling starts.",
+      "Cover the burn loosely with a clean non-fluffy cloth or clear cling film.",
+      "Do not pop blisters. Seek emergency medical care immediately."
+    ],
+    "contraindications": ["ice_application","butter_cream","toothpaste","tight_bandage","oil"],
+    "escalation_triggers": ["face","hand","genitals","joint","electrical","chemical","large area","large_area"]
+  },
+
+  "BURN_MINOR_002": {
+    "name": "Minor Burn First Degree",
+    "keywords": ["sunburn", "sun burn", "small burn", "minor burn", "redness", "hot touch", "mild burn", "little burn", "slight burn", "skin red", "skin redness"],
+    "severity": "MINOR",
+    "steps": [
+      "Cool the area immediately with cool (not cold) running water for at least 10 minutes.",
+      "Apply a gentle soothing lotion or aloe vera gel once the area has cooled completely.",
+      "Cover with a loose sterile non-adhesive bandage or clean cloth.",
+      "Take paracetamol for pain relief if needed — do NOT take ibuprofen on a burn.",
+      "Monitor for signs of infection over the next 24-48 hours (pus, increasing redness, swelling)."
+    ],
+    "contraindications": ["ice_application","butter","toothpaste","ibuprofen_topical"],
+    "escalation_triggers": ["larger than palm","deep burn","white skin","black skin","no pain felt","no pain"]
+  },
+
+  "CHOKING_ADULT_001": {
+    "name": "Adult Choking",
+    "keywords": ["choking","cant breathe","food stuck","throat blocked","heimlich","airway blocked","not breathing","swallowed object","something stuck"],
+    "severity": "CRITICAL",
+    "steps": [
+      "Ask the person: Are you choking? If they cannot speak, cough, or breathe — act immediately.",
+      "Give 5 firm back blows: lean person forward, use heel of your hand between shoulder blades.",
+      "Give 5 abdominal thrusts (Heimlich): stand behind, make fist above navel, pull sharply inward and upward.",
+      "Alternate 5 back blows then 5 abdominal thrusts until the object dislodges or they lose consciousness.",
+      "If they become unconscious: lay them down, call ambulance immediately, and begin CPR."
+    ],
+    "contraindications": ["give_water","put_fingers_in_mouth"],
+    "escalation_triggers": ["unconscious","infant","pregnant","not responding","always_escalate"]
+  },
+
+  "FRACTURE_001": {
+    "name": "Suspected Fracture or Broken Bone",
+    "keywords": ["broken bone","fracture","bone broken","fell and broke","snap","crack sound","cant move limb","deformed limb","bone sticking","see the bone","limb bent","arm broken","leg broken"],
+    "severity": "HIGH",
+    "steps": [
+      "Tell the person to stay still. Do NOT attempt to move or straighten the injured limb.",
+      "Immobilize the limb in the position found: use a splint (rolled magazine, board, umbrella) tied gently above and below the injury.",
+      "Apply a cold pack or ice wrapped in cloth — 20 minutes on, 20 minutes off — to reduce swelling.",
+      "If the bone is protruding through skin (open fracture): cover with a clean sterile cloth, do not push it in.",
+      "Keep the person warm and as still as possible. Call ambulance or arrange urgent hospital transport."
+    ],
+    "contraindications": ["realign_bone","remove_splint","apply_heat","push_exposed_bone"],
+    "escalation_triggers": ["spine","pelvis","skull","open fracture","see the bone","bone sticking","loss of sensation","not moving","cannot move"]
+  },
+
+  "CARDIAC_001": {
+    "name": "Cardiac Arrest or Unresponsive Person",
+    "keywords": ["heart attack","chest pain","not breathing","unresponsive","cpr","no pulse","collapsed","cardiac arrest","heart stopped","heart failure","clutching chest"],
+    "severity": "CRITICAL",
+    "steps": [
+      "CALL AMBULANCE (108/112) IMMEDIATELY — do this before anything else.",
+      "Check response: tap shoulders firmly and shout loudly. If no response and not breathing normally, begin CPR.",
+      "CPR — chest compressions: place heel of hand center of chest, push down 5-6cm, 100-120 compressions per minute.",
+      "After every 30 compressions, give 2 rescue breaths: tilt head, lift chin, pinch nose, breathe into mouth for 1 second.",
+      "Continue until ambulance arrives, the person recovers, or an AED becomes available. Use AED as soon as possible."
+    ],
+    "contraindications": ["give_food_or_water","leave_alone","stop_cpr_early"],
+    "escalation_triggers": ["always_escalate","aed_available"]
+  },
+
+  "BLEEDING_001": {
+    "name": "Severe External Bleeding",
+    "keywords": ["bleeding badly","severe bleeding","heavy bleeding","blood wont stop","bleeding profusely","hemorrhage","severed","gash","deep wound","laceration","bleeding a lot","so much blood","blood everywhere","wound bleeding"],
+    "severity": "HIGH",
+    "steps": [
+      "Apply firm direct pressure to the wound immediately using a clean cloth or bandage — do not remove once applied.",
+      "If blood soaks through, add more layers on top — do NOT remove the first layer.",
+      "Raise the injured area above heart level if possible (unless broken bone suspected).",
+      "For limb bleeding that will not stop: apply a tourniquet 5cm above the wound, note the time applied.",
+      "Keep the person warm and still. Call ambulance for severe or uncontrolled bleeding."
+    ],
+    "contraindications": ["remove_blood_soaked_cloth","apply_tourniquet_on_joint"],
+    "escalation_triggers": ["spurting blood","spurting_blood","unconscious","wound to neck","wound to chest","tourniquet applied","wont stop","won't stop","not stopping"]
+  },
+
+  "MINOR_WOUND_001": {
+    "name": "Minor Cut or Wound",
+    "keywords": ["small cut","paper cut","minor cut","little cut","small wound","tiny cut","scratch","scrape","grazed","nicked","small gash","cut finger","cut hand","cut myself cooking","cooking cut"],
+    "severity": "MINOR",
+    "steps": [
+      "Rinse the wound gently under clean running water for 1-2 minutes to remove any debris.",
+      "Apply gentle pressure with a clean cloth or bandage until bleeding stops — this usually takes 5-10 minutes.",
+      "Clean around the wound with mild soap, avoiding getting soap inside the wound.",
+      "Apply an antiseptic cream and cover with a sterile adhesive bandage.",
+      "Monitor for signs of infection over the next 24-48 hours: increasing redness, swelling, warmth, or pus."
+    ],
+    "contraindications": ["use_alcohol_directly","hydrogen_peroxide_inside_wound"],
+    "escalation_triggers": ["deep cut","wont stop bleeding","bone visible","tendon visible","very deep","arterial bleeding"]
+  },
+
+  "SEIZURE_001": {
+    "name": "Seizure or Convulsion",
+    "keywords": ["seizure","convulsion","fit","shaking uncontrollably","epilepsy","twitching","jerking","having a fit","convulsing"],
+    "severity": "HIGH",
+    "steps": [
+      "Stay calm. Time the seizure. Clear away any hard or sharp objects from around the person.",
+      "Do NOT restrain the person. Do NOT put anything in their mouth.",
+      "Cushion the person's head with something soft. Loosen any tight clothing around the neck.",
+      "When shaking stops, gently roll the person onto their side (recovery position) to keep airway clear.",
+      "Stay with them until they are fully alert. Call ambulance if it is their first seizure, lasts over 5 minutes, or they are injured."
+    ],
+    "contraindications": ["restrain_person","put_object_in_mouth","give_water_during_seizure"],
+    "escalation_triggers": ["first seizure","over 5 minutes","no recovery","injury","pregnant","diabetic","always_escalate"]
+  },
+
+  "POISONING_001": {
+    "name": "Poisoning or Toxic Ingestion",
+    "keywords": ["poison","swallowed something","chemical ingested","toxic","overdose","ate something dangerous","drank something dangerous","bleach","pills overdose","drug overdose","swallowed pills"],
+    "severity": "CRITICAL",
+    "steps": [
+      "Call Poison Control (1800-11-6117 India) or emergency services (108) IMMEDIATELY.",
+      "Do NOT induce vomiting unless explicitly told to do so by Poison Control.",
+      "If the person is unconscious and not breathing normally, begin CPR.",
+      "Keep the container or packaging of the substance — tell emergency services exactly what was ingested.",
+      "Stay with the person and monitor their breathing and consciousness until help arrives."
+    ],
+    "contraindications": ["induce_vomiting_without_instruction","give_food_or_water","leave_alone"],
+    "escalation_triggers": ["always_escalate","unconscious","not_breathing","seizure"]
+  },
+
+  "DEFAULT_001": {
+    "name": "General First Aid",
+    "keywords": [],
+    "severity": "MODERATE",
+    "steps": [
+      "Stay calm and assess the situation — your composure helps the injured person.",
+      "Ensure the scene is safe before approaching — do not put yourself at risk.",
+      "Call emergency services (108) if the situation seems life-threatening or you are unsure.",
+      "Keep the person comfortable, still, and warm. Do not give food or water unless they are fully conscious.",
+      "Monitor their breathing and level of consciousness until professional help arrives."
+    ],
+    "contraindications": [],
+    "escalation_triggers": ["unresponsive","not_breathing","heavy_bleeding","suspected_poisoning"]
+  }
 }

@@ -1,3 +1,4 @@
+//...components/InputScreen.jsx
 import { useState, useRef } from "react";
 
 export default function InputScreen({ mode, onBack, onSubmit, loading }) {
