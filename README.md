@@ -233,7 +233,7 @@ POST /api/v1/process
 
 ## The Team
 
-Built by **Team LowkeyCoders** for [Hackathon Name] 2026.
+Built by **Team LowkeyCoders** for ET GEN AI Hackathon 2026.
 
 | Name | Role | GitHub |
 |---|---|---|
