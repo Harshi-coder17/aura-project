@@ -7,8 +7,8 @@ rights over this project. This file serves as a permanent record of authorship.
 
 | Name | Role | GitHub |
 |------|------|--------|
-| Harshita | Frontend & Integration | [@Harshi-coder17](https://github.com/Harshi-coder17) |
-| Adhiraj Singh Saini | AI/ML Pipeline | [@AdhirajCoder16](https://github.com/AdhirajCoder16) |
+| Harshita | Frontend, AIML & Integration | [@Harshi-coder17](https://github.com/Harshi-coder17) |
+| Adhiraj Singh Saini | AI/ML Pipeline & Integration | [@AdhirajCoder16](https://github.com/AdhirajCoder16) |
 | Iksha | Frontend & UX | [@Iksha-Goomer](https://github.com/Iksha-Goomer) |
 | Armaan Malhotra | Backend & API | [@armaan-1207](https://github.com/armaan-1207) |
 
